@@ -1,5 +1,6 @@
 # Solitare
 A Solitare game built with Python arcade Package.
+Created to test and get use to the Arcade library.
 
 # Running the game
 Run Game.py in an interpreter or create an exe with pyinstaller. All needed files are included in resources. (pyinstaller Game.py --onefile --add-data "resources;resources"
