@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """
 Created on Mon Oct  5 14:47:34 2020
-
 @author: Brandon'
 """
 
@@ -16,6 +15,7 @@ import math
 
 from Card import Card
 from Burst import Burst
+from Line import Line
 
 # Screen title and size
 SCREEN_WIDTH = 1024
@@ -83,6 +83,7 @@ PARTICLE_COUNT = 500
 # Particle effect fade out time
 MIN_FADE_TIME = 0.25
 MAX_FADE_TIME = 3
+MAX_LINE_FADE_TIME = .25
 
 # List of positions on the screen particle effects should take place
 PARTICLE_POSITIONS = [[-.9,.3], [-.7, .4], [-.5, .45], [-.3, .48], [0, .5], [.3, .48], [.5, .45], [.7, .4], [.9, .3]]
@@ -134,7 +135,7 @@ class MyGame(arcade.Window):
     def setup(self):
         """ Set up the game here. Call this function to restart the game. """
         # A variable for the game end state
-        self.game_over = False
+        self.game_over = True
         
         # A sprite list for the game end states
         self.game_over_list = arcade.SpriteList()
@@ -261,6 +262,12 @@ class MyGame(arcade.Window):
                 # Get initial particle data
                 initial_data = _gen_initial_data(x2, y2)
                 
+                # Convert OpenGL point to screen resolution
+                x3 = SCREEN_WIDTH/2 + ((SCREEN_WIDTH/2) * x2)
+                y3 = SCREEN_HEIGHT/2 + ((SCREEN_HEIGHT/2) * y2)
+                
+                point = (x3, y3)
+                
                 # Create a buffer with that data
                 buffer = self.ctx.buffer(data=array('f', initial_data))
                 
@@ -275,7 +282,7 @@ class MyGame(arcade.Window):
                 # Create our Vertex Attribute Object
                 vao = self.ctx.geometry([buffer_description])
                 
-                return [buffer, vao]
+                return [buffer, vao, point]
             
             # Slow down the rate at which bursts happen
             if time.time() - self.burst_timer > 1:
@@ -284,20 +291,24 @@ class MyGame(arcade.Window):
                 for i in range(random.randint(1,3)):
                     burst_data = _gen_burst_data()
                     # Create the Burst object and add it to the list of bursts
-                    burst = Burst(buffer=burst_data[0], vao=burst_data[1], start_time=time.time())
+                    burst = Burst(buffer=burst_data[0], vao=burst_data[1], start_time=time.time(), point=burst_data[2])
                     self.burst_list.append(burst)
                 
             
             
 
-        # Create a copy of our list, as we can't modify a list while iterating
-        # it. Then see if any of the items have completely faded out and need
-        # to be removed.
-        temp_list = self.burst_list.copy()
-        for burst in temp_list:
-            if time.time() - burst.start_time > MAX_FADE_TIME:
-               self.burst_list.remove(burst)
-
+            # Create a copy of our list, as we can't modify a list while iterating
+            # it. Then see if any of the items have completely faded out and need
+            # to be removed.
+            temp_list = self.burst_list.copy()
+            for burst in temp_list:
+                if time.time() - burst.start_time > MAX_FADE_TIME:
+                   self.burst_list.remove(burst)
+            
+            for burst in self.burst_list:
+                if time.time() - burst.start_time > MAX_LINE_FADE_TIME:
+                    burst.line.draw = False
+                
     def on_draw(self):
         """ Render the screen. """
         # Clear the screen
@@ -322,6 +333,10 @@ class MyGame(arcade.Window):
                 
                 # Set the uniform data
                 self.program['time'] = time.time() - burst.start_time
+                
+                # Draw the line
+                if burst.line.draw:
+                    arcade.draw_lines( ( (SCREEN_WIDTH/2, 0), burst.point ), arcade.color.BLUE, 3)
                 
                 # Render the burst
                 burst.vao.render(self.program, mode = self.ctx.POINTS)
