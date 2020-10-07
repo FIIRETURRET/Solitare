@@ -1,5 +1,5 @@
 # Solitare
-A Solitare game built with Python arcade Package.
+A GIU based Solitare game built with Python arcade Package.
 Created to test and get use to the Arcade library.
 
 # Running the game
