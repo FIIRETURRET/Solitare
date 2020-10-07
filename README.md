@@ -17,6 +17,6 @@ make it so you can only stack in correct color/order
 add more visual effects
 
 
-#Update 10/6/2020
+# Update 10/6/2020
 I will most likely not be updating this program and instead move forward with my next original cardgame. Stay tuned you cheaters.
 
