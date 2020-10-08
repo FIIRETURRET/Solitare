@@ -4,7 +4,8 @@ Created to test and get use to the Arcade library.
 Featuring a mouse based GUI interface and particle effects
 
 # Requirements
-arcade library
+arcade library,
+dataclasses library,
 python 3
 
 # Running the game
