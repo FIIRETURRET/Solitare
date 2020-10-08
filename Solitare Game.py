@@ -1,20 +1,8 @@
-# -*- coding: utf-8 -*-
 """
-Created on Mon Oct  5 14:47:34 2020
-@author: Brandon'
+Solitaire clone.
 """
-
-from arcade.utils import _Vec2  # bring in "private" class
-import arcade
 import random
-import arcade.gl
-import time
-import pyglet
-
-from Card import Card
-from RocketEmitter import RocketEmitter
-from AnimatedAlphaParticle import AnimatedAlphaParticle
-
+import arcade
 
 # Screen title and size
 SCREEN_WIDTH = 1024
@@ -76,96 +64,41 @@ TOP_PILE_2 = 10
 TOP_PILE_3 = 11
 TOP_PILE_4 = 12
 
-ROCKET_SMOKE_TEXTURE = arcade.make_soft_circle_texture(15, arcade.color.GRAY)
-FLASH_TEXTURE = arcade.make_soft_circle_texture(70, (128, 128, 90))
-PUFF_TEXTURE = arcade.make_soft_circle_texture(80, (40, 40, 40))
-CLOUD_TEXTURES = [
-    arcade.make_soft_circle_texture(50, arcade.color.WHITE),
-    arcade.make_soft_circle_texture(50, arcade.color.LIGHT_GRAY),
-    arcade.make_soft_circle_texture(50, arcade.color.LIGHT_BLUE),
-]
-STAR_TEXTURES = [
-    arcade.make_soft_circle_texture(8, arcade.color.WHITE),
-    arcade.make_soft_circle_texture(8, arcade.color.PASTEL_YELLOW),
-]
-LAUNCH_INTERVAL_MIN = 0.2
-LAUNCH_INTERVAL_MAX = 1.0
-RAINBOW_COLORS = (
-    arcade.color.ELECTRIC_CRIMSON,
-    arcade.color.FLUORESCENT_ORANGE,
-    arcade.color.ELECTRIC_YELLOW,
-    arcade.color.ELECTRIC_GREEN,
-    arcade.color.ELECTRIC_CYAN,
-    arcade.color.MEDIUM_ELECTRIC_BLUE,
-    arcade.color.ELECTRIC_INDIGO,
-    arcade.color.ELECTRIC_PURPLE,
-)
-SPARK_TEXTURES = [arcade.make_circle_texture(8, clr) for clr in RAINBOW_COLORS]
-SPARK_PAIRS = [
-    [SPARK_TEXTURES[0], SPARK_TEXTURES[3]],
-    [SPARK_TEXTURES[1], SPARK_TEXTURES[5]],
-    [SPARK_TEXTURES[7], SPARK_TEXTURES[2]],
-]
-SPINNER_HEIGHT = 75
+# Face down image
+FACE_DOWN_IMAGE = ":resources:images/cards/cardBack_red2.png"
 
 
-def make_spinner():
-    spinner = arcade.Emitter(
-        center_xy=(SCREEN_WIDTH / 2, SPINNER_HEIGHT - 5),
-        emit_controller=arcade.EmitterIntervalWithTime(0.025, 2.0),
-        particle_factory=lambda emitter: arcade.FadeParticle(
-            filename_or_texture=random.choice(STAR_TEXTURES),
-            change_xy=(0, 6.0),
-            lifetime=0.2
-        )
-    )
-    spinner.change_angle = 16.28
-    return spinner
+class Card(arcade.Sprite):
+    """ Card sprite """
 
-def make_rocket(emit_done_cb):
-    """ Emitter that displays the smoke trail as the firework shell climbs into the sky """
-    rocket = RocketEmitter(
-            center_xy = ( random.uniform(100, SCREEN_WIDTH - 100), 25),
-            emit_controller=arcade.EmitterIntervalWithTime(0.04, 2.0),
-            particle_factory=lambda emitter: arcade.FadeParticle(
-                    filename_or_texture=ROCKET_SMOKE_TEXTURE,
-                    change_xy=arcade.rand_in_circle((0.0, 0.0), 0.08),
-                    scale=0.5,
-                    lifetime=random.uniform(1.0, 1.5),
-                    start_alpha=100,
-                    end_alpha=0,
-                    mutation_callback=rocket_smoke_mutator
-            ),
-            emit_done_cb=emit_done_cb            
-    )
-    rocket.change_x = random.uniform(-1.0, 1.0)
-    rocket.change_y = random.uniform(5.0, 7.25)
-    return rocket
+    def __init__(self, suit, value, scale=1):
+        """ Card constructor """
 
-def make_flash(prev_emitter):
-    """ Return emitter that displays the brief flash when a firework shell explodes """
-    return arcade.Emitter(
-        center_xy=prev_emitter.get_pos(),
-        emit_controller=arcade.EmitBurst(3),
-        particle_factory=lambda emitter: arcade.FadeParticle(
-            filename_or_texture=FLASH_TEXTURE,
-            change_xy=arcade.rand_in_circle((0.0, 0.0), 3.5),
-            lifetime=0.15
-        )
-    )
+        # Attributes for suit and value
+        self.suit = suit
+        self.value = value
+
+        # Image to use for the sprite when face up
+        self.image_file_name = f":resources:images/cards/card{self.suit}{self.value}.png"
+        self.is_face_up = False
+
+        # Call the parent
+        super().__init__(FACE_DOWN_IMAGE, scale)
         
-def make_puff(prev_emitter):
-    """ Return emitter that generates the subtle smoke cloud left after a firework shell explodes """
-    return arcade.Emitter(
-        center_xy=prev_emitter.get_pos(),
-        emit_controller=arcade.EmitBurst(4),
-        particle_factory=lambda emitter: arcade.FadeParticle(
-            filename_or_texture=PUFF_TEXTURE,
-            change_xy=(_Vec2(arcade.rand_in_circle((0.0, 0.0), 0.4)) + _Vec2(0.3, 0.0)).as_tuple(),
-            lifetime=4.0
-        )
+    def face_down(self):
+        """ Turn card face-down """
+        self.texture = arcade.load_texture(FACE_DOWN_IMAGE)
+        self.is_face_up = False
         
-    )
+    def face_up(self):
+        """ Turn card face-up """
+        self.texture = arcade.load_texture(self.image_file_name)
+        self.is_face_up = True
+        
+    @property
+    def is_face_down(self):
+        """ is this card face down? """
+        return not self.is_face_up
 
 class MyGame(arcade.Window):
     """ Main application class. """
@@ -190,62 +123,9 @@ class MyGame(arcade.Window):
 
         # Create a list of lists, each holds a pile of cards.
         self.piles = None
-        
-        # A variable for the game end state
-        self.game_over = None
-        
-        # A sprite list for the game end states
-        self.game_over_list = None
-        
-        self.emitters = []
-
-        self.launch_firework(0)
-        #arcade.schedule(self.launch_spinner, 4.0)
-
-        stars = arcade.Emitter(
-            center_xy=(0.0, 0.0),
-            emit_controller=arcade.EmitMaintainCount(20),
-            particle_factory=lambda emitter: AnimatedAlphaParticle(
-                filename_or_texture=random.choice(STAR_TEXTURES),
-                change_xy=(0.0, 0.0),
-                start_alpha=0,
-                duration1=random.uniform(2.0, 6.0),
-                mid_alpha=128,
-                duration2=random.uniform(2.0, 6.0),
-                end_alpha=0,
-                center_xy=arcade.rand_in_rect((0.0, 0.0), SCREEN_WIDTH, SCREEN_HEIGHT)
-            )
-        )
-        
-
-        self.cloud = arcade.Emitter(
-            center_xy=(50, 500),
-            change_xy=(0.15, 0),
-            emit_controller=arcade.EmitMaintainCount(60),
-            particle_factory=lambda emitter: AnimatedAlphaParticle(
-                filename_or_texture=random.choice(CLOUD_TEXTURES),
-                change_xy=(_Vec2(arcade.rand_in_circle((0.0, 0.0), 0.04)) + _Vec2(0.1, 0)).as_tuple(),
-                start_alpha=0,
-                duration1=random.uniform(5.0, 10.0),
-                mid_alpha=255,
-                duration2=random.uniform(5.0, 10.0),
-                end_alpha=0,
-                center_xy=arcade.rand_in_circle((0.0, 0.0), 50)
-            )
-        )
-        
 
     def setup(self):
         """ Set up the game here. Call this function to restart the game. """
-        # A variable for the game end state
-        self.game_over = False
-        
-        # A sprite list for the game end states
-        self.game_over_list = arcade.SpriteList()
-        self.you_win_sprite = arcade.Sprite("resources/images/game states/you win.PNG", 1.5)
-        self.you_win_sprite.center_x = SCREEN_WIDTH/2 
-        self.you_win_sprite.center_y = SCREEN_HEIGHT/2 
-        self.game_over_list.append(self.you_win_sprite)
 
         # List of cards we are dragging with the mouse
         self.held_cards = []
@@ -321,113 +201,18 @@ class MyGame(arcade.Window):
         # Flip up the top cards
         for i in range(PLAY_PILE_1, PLAY_PILE_7+1):
             self.piles[i][-1].face_up()
-            
-            
-    # Firework functions
-    def launch_firework(self, delta_time):
-        launchers = (
-            self.launch_random_firework,
-            self.launch_ringed_firework,
-            self.launch_sparkle_firework,
-        )
-        random.choice(launchers)(delta_time)
-        pyglet.clock.schedule_once(self.launch_firework, random.uniform(LAUNCH_INTERVAL_MIN, LAUNCH_INTERVAL_MAX))
 
-    def launch_random_firework(self, _delta_time):
-        """Simple firework that explodes in a random color"""
-        rocket = make_rocket(self.explode_firework)
-        self.emitters.append(rocket)
+    def on_draw(self):
+        """ Render the screen. """
+        # Clear the screen
+        arcade.start_render()
 
-    def launch_ringed_firework(self, _delta_time):
-        """"Firework that has a basic explosion and a ring of sparks of a different color"""
-        rocket = make_rocket(self.explode_ringed_firework)
-        self.emitters.append(rocket)
+        # Draw the mats the cards go on to
+        self.pile_mat_list.draw()
 
-    def launch_sparkle_firework(self, _delta_time):
-        """Firework which has sparks that sparkle"""
-        rocket = make_rocket(self.explode_sparkle_firework)
-        self.emitters.append(rocket)
+        # Draw the cards
+        self.card_list.draw()
 
-    def launch_spinner(self, _delta_time):
-        """Start the spinner that throws sparks"""
-        spinner1 = make_spinner()
-        spinner2 = make_spinner()
-        spinner2.angle = 180
-        self.emitters.append(spinner1)
-        self.emitters.append(spinner2)
-
-    def explode_firework(self, prev_emitter):
-        """Actions that happen when a firework shell explodes, resulting in a typical firework"""
-        #self.emitters.append(make_puff(prev_emitter))
-        self.emitters.append(make_flash(prev_emitter))
-
-        spark_texture = random.choice(SPARK_TEXTURES)
-        sparks = arcade.Emitter(
-            center_xy=prev_emitter.get_pos(),
-            emit_controller=arcade.EmitBurst(random.randint(30, 40)),
-            particle_factory=lambda emitter: arcade.FadeParticle(
-                filename_or_texture=spark_texture,
-                change_xy=arcade.rand_in_circle((0.0, 0.0), 9.0),
-                lifetime=random.uniform(0.5, 1.2),
-                mutation_callback=firework_spark_mutator
-            )
-        )
-        self.emitters.append(sparks)
-
-    def explode_ringed_firework(self, prev_emitter):
-        """Actions that happen when a firework shell explodes, resulting in a ringed firework"""
-        #self.emitters.append(make_puff(prev_emitter))
-        self.emitters.append(make_flash(prev_emitter))
-
-        spark_texture, ring_texture = random.choice(SPARK_PAIRS)
-        sparks = arcade.Emitter(
-            center_xy=prev_emitter.get_pos(),
-            emit_controller=arcade.EmitBurst(25),
-            particle_factory=lambda emitter: arcade.FadeParticle(
-                filename_or_texture=spark_texture,
-                change_xy=arcade.rand_in_circle((0.0, 0.0), 8.0),
-                lifetime=random.uniform(0.55, 0.8),
-                mutation_callback=firework_spark_mutator
-            )
-        )
-        self.emitters.append(sparks)
-
-        ring = arcade.Emitter(
-            center_xy=prev_emitter.get_pos(),
-            emit_controller=arcade.EmitBurst(20),
-            particle_factory=lambda emitter: arcade.FadeParticle(
-                filename_or_texture=ring_texture,
-                change_xy=arcade.rand_on_circle((0.0, 0.0), 5.0) + arcade.rand_in_circle((0.0, 0.0), 0.25),
-                lifetime=random.uniform(1.0, 1.6),
-                mutation_callback=firework_spark_mutator
-            )
-        )
-        self.emitters.append(ring)
-
-    def explode_sparkle_firework(self, prev_emitter):
-        """Actions that happen when a firework shell explodes, resulting in a sparkling firework"""
-        #self.emitters.append(make_puff(prev_emitter))
-        self.emitters.append(make_flash(prev_emitter))
-
-        spark_texture = random.choice(SPARK_TEXTURES)
-        sparks = arcade.Emitter(
-            center_xy=prev_emitter.get_pos(),
-            emit_controller=arcade.EmitBurst(random.randint(30, 40)),
-            particle_factory=lambda emitter: AnimatedAlphaParticle(
-                filename_or_texture=spark_texture,
-                change_xy=arcade.rand_in_circle((0.0, 0.0), 9.0),
-                start_alpha=255,
-                duration1=random.uniform(0.6, 1.0),
-                mid_alpha=0,
-                duration2=random.uniform(0.1, 0.2),
-                end_alpha=255,
-                mutation_callback=firework_spark_mutator
-            )
-        )
-        self.emitters.append(sparks)
-        
-        
-    
     def pull_to_top(self, card):
         """ Pull card to top of rendering order (last to render, looks on-top) """
         # Find the index of the card
@@ -592,12 +377,6 @@ class MyGame(arcade.Window):
 
         # We are no longer holding cards
         self.held_cards = []
-        
-        # Check to see if the game is over
-        # If we have no cards in hand, no cards in our face up pile, and no cards in our facedown pile, the game is over
-        if len(self.held_cards) == 0 and len(self.piles[BOTTOM_FACE_DOWN_PILE]) == 0 and len(self.piles[BOTTOM_FACE_UP_PILE]) == 0:
-            self.game_over = True
-            self.burst_timer = time.time()
 
     def on_mouse_motion(self, x: float, y: float, dx: float, dy: float):
         """ User moves mouse """
@@ -612,55 +391,8 @@ class MyGame(arcade.Window):
         if symbol == arcade.key.R:
             # Restart
             self.setup()
-       
-    def update(self, delta_time):
-        if self.game_over:
-            # prevent list from being mutated (often by callbacks) while iterating over it
-            emitters_to_update = self.emitters.copy()
-            # update cloud
-            if self.cloud.center_x > SCREEN_WIDTH:
-                self.cloud.center_x = 0
-            # update
-            for e in emitters_to_update:
-                e.update()
-            # remove emitters that can be reaped
-            to_del = [e for e in emitters_to_update if e.can_reap()]
-            for e in to_del:
-                self.emitters.remove(e)
-        
-    def on_update(self, dt):
-        """ Update game """
-        pass
-                
-    def on_draw(self):
-        """ Render the screen. """
-        # Clear the screen
-        arcade.start_render()
-
-        # Draw the mats the cards go on to
-        self.pile_mat_list.draw()
-
-        # Draw the cards
-        self.card_list.draw()
-        
-        # Draw fireworks
-        if self.game_over:
-            for e in self.emitters:
-                e.draw()
-        
-            
-def firework_spark_mutator(particle: arcade.FadeParticle):
-    """mutation_callback shared by all fireworks sparks"""
-    # gravity
-    particle.change_y += -0.03
-    # drag
-    particle.change_x *= 0.92
-    particle.change_y *= 0.92
 
 
-def rocket_smoke_mutator(particle: arcade.LifetimeParticle):
-    particle.scale = arcade.lerp(0.5, 3.0, particle.lifetime_elapsed / particle.lifetime_original)
-       
 def main():
     """ Main method """
     window = MyGame()
