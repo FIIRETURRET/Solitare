@@ -135,7 +135,7 @@ class MyGame(arcade.Window):
     def setup(self):
         """ Set up the game here. Call this function to restart the game. """
         # A variable for the game end state
-        self.game_over = True
+        self.game_over = False
         
         # A sprite list for the game end states
         self.game_over_list = arcade.SpriteList()
@@ -336,7 +336,7 @@ class MyGame(arcade.Window):
                 
                 # Draw the line
                 if burst.line.draw:
-                    arcade.draw_lines( ( (SCREEN_WIDTH/2, 0), burst.point ), arcade.color.BLUE, 3)
+                    arcade.draw_lines( ( (SCREEN_WIDTH/2, 0), burst.point ), arcade.color.ARSENIC, 3)
                 
                 # Render the burst
                 burst.vao.render(self.program, mode = self.ctx.POINTS)
