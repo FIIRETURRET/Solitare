@@ -6,6 +6,7 @@ Featuring a mouse based GUI interface and particle effects
 # Requirements
 arcade library,
 dataclasses library,
+pyglet library,
 python 3
 
 # Running the game
