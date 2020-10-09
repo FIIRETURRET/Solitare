@@ -197,10 +197,9 @@ class MyGame(arcade.Window):
         # A sprite list for the game end states
         self.game_over_list = None
         
+        self.fireworks_started = False
+        
         self.emitters = []
-
-        self.launch_firework(0)
-        #arcade.schedule(self.launch_spinner, 4.0)
 
         stars = arcade.Emitter(
             center_xy=(0.0, 0.0),
@@ -614,7 +613,13 @@ class MyGame(arcade.Window):
             self.setup()
        
     def update(self, delta_time):
+        print(self.emitters)
         if self.game_over:
+            if not self.fireworks_started:
+                self.launch_firework(0)
+                self.fireworks_started = True
+                #arcade.schedule(self.launch_spinner, 4.0)
+            
             # prevent list from being mutated (often by callbacks) while iterating over it
             emitters_to_update = self.emitters.copy()
             # update cloud
