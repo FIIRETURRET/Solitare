@@ -613,7 +613,6 @@ class MyGame(arcade.Window):
             self.setup()
        
     def update(self, delta_time):
-        print(self.emitters)
         if self.game_over:
             if not self.fireworks_started:
                 self.launch_firework(0)
