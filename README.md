@@ -10,6 +10,11 @@ pyglet library,
 python 3
 
 # Running the game
+Download the Exe on itch.io here:
+https://fiireturret.itch.io/broke-solitaire
+
+OR
+
 Run Game.py in an interpreter or create an exe with pyinstaller. All needed files are included in resources, the created exe file must be in the same diretory as the resources folder due to relative imports and references. (pyinstaller Game.py --onefile --add-data "resources;resources"
 
 # Playing the game
